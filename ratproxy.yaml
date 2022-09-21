@@ -1,0 +1,8 @@
+listen: 0.0.0.0:1414
+targets:
+  - name: service1
+    target: http://localhost:10000
+    path: /service1/
+  - name: service2
+    target: http://localhost:1313
+    path: /
