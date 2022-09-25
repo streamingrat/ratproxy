@@ -2,7 +2,10 @@
 Ratproxy is a simple reverse proxy server to let you simulate something like AWS cloudfront sitting in front of your services.
 
 Installation:
-   `go get github.com/streamingrat/ratproxy
+
+```sh
+go get github.com/streamingrat/ratproxy
+```
 
 By default ratproxy will use the environment variable `RATPROXY_FILENAME` to open the config file.  If not set uses ratproxy.yaml.
 
