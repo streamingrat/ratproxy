@@ -18,6 +18,7 @@ You configure the ratproxy with a yaml file like the following, which configures
 listen: 0.0.0.0:1414
 targets:
  - name: server1
+   type: lambda
    target: http://localhost:10000
    path: /service1/
  - name: server2

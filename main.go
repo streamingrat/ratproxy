@@ -16,6 +16,7 @@
 //  - name: server1
 //    target: http://localhost:10000
 //    path: /service1/
+//    type: lambda
 //  - name: server2
 //    target: http://localhost:1313
 //    path: /
@@ -24,36 +25,18 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
-// Config is the ratproxy.yaml.
-type Config struct {
-	Listen  string   `yaml:"listen"`
-	Targets []Target `yaml:"targets"`
-}
-
-// Target is a proxy target based on a path.
-type Target struct {
-	Name   string `yaml:"name"`
-	Target string `yaml:"target"`
-	Path   string `yaml:"path"`
-}
-
 // proxyTarget sets up a reverse proxy with name for logging to target, name is for logging.
-func proxyTarget(ctx context.Context, target string, name string) func(http.ResponseWriter, *http.Request) {
+func proxyTarget(ctx context.Context, target *Target) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		showServer, err := url.Parse(target)
+		showServer, err := url.Parse(target.Target)
 		if err != nil {
 			panic(err)
 		}
@@ -65,7 +48,7 @@ func proxyTarget(ctx context.Context, target string, name string) func(http.Resp
 			req.URL.Scheme = showServer.Scheme
 			req.URL.Host = showServer.Host
 			req.URL.Path = r.URL.Path
-			log.Printf("ratproxy: %v %v: %v\n", r.Method, name, r.URL.Path)
+			log.Printf("ratproxy: %v %v: %v\n", r.Method, target.Name, r.URL.Path)
 		}
 		proxy.ServeHTTP(w, r)
 	}
@@ -74,30 +57,20 @@ func proxyTarget(ctx context.Context, target string, name string) func(http.Resp
 
 func main() {
 
-	configFilename := os.Getenv("RATPROXY_FILENAME")
-	if configFilename == "" {
-		configFilename = "ratproxy.yaml"
-	}
-
-	fmt.Printf("ratproxy: reading config at %v\n", configFilename)
-	data, err := ioutil.ReadFile(configFilename)
-	if err != nil {
-		panic(err)
-	}
-	c := Config{}
-	err = yaml.Unmarshal(data, &c)
-	if err != nil {
-		panic(err)
-	}
+	c := NewConfig()
 	ctx := context.Background()
 
-	fmt.Printf("ratproxy: read %v targets\n", len(c.Targets))
+	log.Printf("ratproxy: read %v targets\n", len(c.Targets))
 	for i, t := range c.Targets {
-		fmt.Printf("ratproxy: %v: %v %v %v\n", i, t.Name, t.Path, t.Target)
-		http.HandleFunc(t.Path, proxyTarget(ctx, t.Target, t.Name))
+		log.Printf("ratproxy: %v: %v %v %v %v\n", i, t.Name, t.Path, t.Target, t.Type)
+		if t.Type == TargetTypeLambda {
+			http.HandleFunc(t.Path, proxyTargetLambda(ctx, t))
+		} else {
+			http.HandleFunc(t.Path, proxyTarget(ctx, t))
+		}
 
 	}
 
-	fmt.Printf("ratproxy: Listening %v\n", c.Listen)
+	log.Printf("ratproxy: Listening %v\n", c.Listen)
 	log.Fatal(http.ListenAndServe(c.Listen, nil))
 }
