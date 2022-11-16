@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,11 +17,12 @@ import (
 
 // LambdaResponse is the wrapped response from the lambda function that needs to be transformed into an http.Response.
 type LambdaResponse struct {
-	StatusCode        int                 `json:"statusCode"`
-	Headers           map[string]string   `json:"headers"`
-	MultiValueHeaders []map[string]string `json:"multiValueHeaders"`
 	Body              string              `json:"body"`
 	Cookies           []map[string]string `json:"cookies"`
+	Headers           map[string]string   `json:"headers"`
+	IsBase64Encoded   bool                `json:"isBase64Encoded"`
+	MultiValueHeaders []map[string]string `json:"multiValueHeaders"`
+	StatusCode        int                 `json:"statusCode"`
 }
 
 // transformLambdaBody puts the body into the response
@@ -39,13 +41,24 @@ func transformLambdaBody(resp *http.Response) error {
 	lambdaResp := &LambdaResponse{}
 	err := json.Unmarshal([]byte(body), &lambdaResp)
 	if err != nil {
-		log.Printf("transformLambdaBody json.Unmarshal err=%v\n", err)
+		log.Printf("ratproxy: transformLambdaBody json.Unmarshal err=%v\n", err)
 		return err
 	}
 
 	resp.StatusCode = lambdaResp.StatusCode
-	bbody := []byte(lambdaResp.Body)
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(lambdaResp.Body)))
+	var bbody []byte
+	if lambdaResp.IsBase64Encoded {
+		bbody = make([]byte, base64.StdEncoding.DecodedLen(len(lambdaResp.Body)))
+		n, err := base64.StdEncoding.Decode(bbody, []byte(lambdaResp.Body))
+		if err != nil {
+			log.Printf("ratproxy: transformLambdaBody error %v\n", err)
+			return err
+		}
+		bbody = bbody[:n]
+	} else {
+		bbody = []byte(lambdaResp.Body)
+	}
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bbody))
 	for k, v := range lambdaResp.Headers {
 		resp.Header.Set(k, v)
 	}
