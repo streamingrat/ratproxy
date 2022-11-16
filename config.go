@@ -11,6 +11,7 @@ import (
 // Config is the ratproxy.yaml.
 type Config struct {
 	Listen  string    `yaml:"listen"`
+	UseTLS  bool      `yaml:"useTLS"`
 	Targets []*Target `yaml:"targets"`
 }
 
@@ -28,7 +29,7 @@ type Target struct {
 }
 
 // NewConfig reads the yaml configuration file.
-func NewConfig() *Config {
+func NewConfig() (*Config, error) {
 	configFilename := os.Getenv("RATPROXY_FILENAME")
 	if configFilename == "" {
 		configFilename = "ratproxy.yaml"
@@ -37,13 +38,13 @@ func NewConfig() *Config {
 	log.Printf("ratproxy: reading config at %v\n", configFilename)
 	data, err := ioutil.ReadFile(configFilename)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	c := &Config{}
 	err = yaml.Unmarshal(data, &c)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return c
+	return c, nil
 }

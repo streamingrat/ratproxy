@@ -4,7 +4,7 @@ Ratproxy is a simple reverse proxy server to let you simulate something like AWS
 Installation:
 
 ```sh
-go get github.com/streamingrat/ratproxy
+go install github.com/streamingrat/ratproxy@latest
 ```
 
 By default ratproxy will use the environment variable `RATPROXY_FILENAME` to open the config file.  If not set uses ratproxy.yaml.

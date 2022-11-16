@@ -4,7 +4,10 @@ import "testing"
 
 func TestNewConfig(t *testing.T) {
 
-	c := NewConfig()
+	c, err := NewConfig()
+	if err != nil {
+		t.Fatalf("Could not create config")
+	}
 	if c.Listen != "0.0.0.0:1414" {
 		t.Fatalf("Did not get expected listen")
 	}

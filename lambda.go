@@ -60,17 +60,17 @@ func proxyTargetLambda(ctx context.Context, target *Target) func(http.ResponseWr
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		showServer, err := url.Parse(target.Target)
+		targetServer, err := url.Parse(target.Target)
 		if err != nil {
 			panic(err)
 		}
 
-		proxy := httputil.NewSingleHostReverseProxy(showServer)
+		proxy := httputil.NewSingleHostReverseProxy(targetServer)
 		proxy.Director = func(req *http.Request) {
 			req.Header = r.Header
-			req.Host = showServer.Host
-			req.URL.Scheme = showServer.Scheme
-			req.URL.Host = showServer.Host
+			req.Host = targetServer.Host
+			req.URL.Scheme = targetServer.Scheme
+			req.URL.Host = targetServer.Host
 			req.Method = http.MethodPost
 			rawpath := req.URL.Path
 			data := make(map[string]string)

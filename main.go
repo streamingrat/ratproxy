@@ -12,6 +12,7 @@
 // ---------------
 // ```yaml
 // listen: 0.0.0.0:1414
+// useTLS: true
 // targets:
 //  - name: server1
 //    target: http://localhost:10000
@@ -36,17 +37,17 @@ func proxyTarget(ctx context.Context, target *Target) func(http.ResponseWriter, 
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		showServer, err := url.Parse(target.Target)
+		targetServer, err := url.Parse(target.Target)
 		if err != nil {
 			panic(err)
 		}
 
-		proxy := httputil.NewSingleHostReverseProxy(showServer)
+		proxy := httputil.NewSingleHostReverseProxy(targetServer)
 		proxy.Director = func(req *http.Request) {
 			req.Header = r.Header
-			req.Host = showServer.Host
-			req.URL.Scheme = showServer.Scheme
-			req.URL.Host = showServer.Host
+			req.Host = targetServer.Host
+			req.URL.Scheme = targetServer.Scheme
+			req.URL.Host = targetServer.Host
 			req.URL.Path = r.URL.Path
 			log.Printf("ratproxy: %v %v: %v\n", r.Method, target.Name, r.URL.Path)
 		}
@@ -57,7 +58,11 @@ func proxyTarget(ctx context.Context, target *Target) func(http.ResponseWriter, 
 
 func main() {
 
-	c := NewConfig()
+	c, err := NewConfig()
+	if err != nil {
+		log.Printf("ratproxy: Could not read config file %v\n", err)
+		return
+	}
 	ctx := context.Background()
 
 	log.Printf("ratproxy: read %v targets\n", len(c.Targets))
@@ -71,6 +76,15 @@ func main() {
 
 	}
 
-	log.Printf("ratproxy: Listening %v\n", c.Listen)
-	log.Fatal(http.ListenAndServe(c.Listen, nil))
+	log.Printf("ratproxy: Listening %v TLS:%v\n", c.Listen, c.UseTLS)
+	if c.UseTLS {
+		cert, err := createCert()
+		if err != nil {
+			log.Fatalf("ratproxy: Could not create TLS cert err=%v\n", err)
+		}
+		server := http.Server{Addr: c.Listen, TLSConfig: cert}
+		log.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		log.Fatal(http.ListenAndServe(c.Listen, nil))
+	}
 }
