@@ -18,7 +18,7 @@ import (
 // LambdaResponse is the wrapped response from the lambda function that needs to be transformed into an http.Response.
 type LambdaResponse struct {
 	Body              string              `json:"body"`
-	Cookies           []map[string]string `json:"cookies"`
+	Cookies           []string            `json:"cookies"`
 	Headers           map[string]string   `json:"headers"`
 	IsBase64Encoded   bool                `json:"isBase64Encoded"`
 	MultiValueHeaders []map[string]string `json:"multiValueHeaders"`
@@ -85,9 +85,18 @@ func proxyTargetLambda(ctx context.Context, target *Target) func(http.ResponseWr
 			req.URL.Scheme = targetServer.Scheme
 			req.URL.Host = targetServer.Host
 			req.Method = http.MethodPost
-			rawpath := req.URL.Path
-			data := make(map[string]string)
-			data["rawpath"] = req.URL.Path
+			data := make(map[string]interface{})
+			data["rawPath"] = req.URL.Path
+			if r.Method == http.MethodPost {
+				data["requestContext"] = map[string]interface{}{"http": map[string]interface{}{"method": "POST"}}
+				posted, err := ioutil.ReadAll(r.Body)
+				if err != nil {
+					log.Printf("ratproxy: could not read posted body %v\n", err)
+					posted = []byte("{}")
+				}
+
+				data["body"] = string(posted)
+			}
 			b, err := json.Marshal(data)
 			if err != nil {
 				panic(err)
@@ -95,7 +104,8 @@ func proxyTargetLambda(ctx context.Context, target *Target) func(http.ResponseWr
 			req.URL.Path = "/2015-03-31/functions/function/invocations"
 			req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
 			req.ContentLength = int64(len(b))
-			log.Printf("ratproxy: %v %v: %v [%v]\n", r.Method, target.Name, req.URL.Path, rawpath)
+
+			log.Printf("ratproxy: %v %v: %v %v\n", r.Method, target.Name, req.URL.Path, string(b))
 		}
 		proxy.ModifyResponse = transformLambdaBody
 		proxy.ServeHTTP(w, r)
