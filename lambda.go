@@ -62,6 +62,10 @@ func transformLambdaBody(resp *http.Response) error {
 	for k, v := range lambdaResp.Headers {
 		resp.Header.Set(k, v)
 	}
+	for _, c := range lambdaResp.Cookies {
+		resp.Header.Set("Set-Cookie", c)
+	}
+
 	resp.ContentLength = int64(len(bbody))
 	resp.Header.Set("Content-Length", fmt.Sprintf("%v", len(bbody)))
 
@@ -87,6 +91,8 @@ func proxyTargetLambda(ctx context.Context, target *Target) func(http.ResponseWr
 			req.Method = http.MethodPost
 			data := make(map[string]interface{})
 			data["rawPath"] = req.URL.Path
+			data["cookies"] = req.Header["Cookie"]
+
 			if r.Method == http.MethodPost {
 				data["requestContext"] = map[string]interface{}{"http": map[string]interface{}{"method": "POST"}}
 				posted, err := ioutil.ReadAll(r.Body)
