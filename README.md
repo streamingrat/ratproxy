@@ -1,6 +1,8 @@
 # ratproxy
 Ratproxy is a simple reverse proxy server to let you simulate something like AWS cloudfront sitting in front of your services.
 
+![golint](https://github.com/streamingrat/ratproxy/workflows/golint/badge.svg)
+
 Installation:
 
 ```sh
@@ -16,6 +18,7 @@ You configure the ratproxy with a yaml file like the following, which configures
 ---------------
 ```yaml
 listen: 0.0.0.0:1414
+useTLS: true
 targets:
  - name: server1
    type: lambda
