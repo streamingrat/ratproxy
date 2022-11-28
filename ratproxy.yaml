@@ -1,4 +1,6 @@
 listen: 0.0.0.0:1414
+# Uncomment the following line if you want to use a self-signed TLS cert for the main listener.
+# useTLS: true
 targets:
   - name: service1
     target: http://localhost:10000
