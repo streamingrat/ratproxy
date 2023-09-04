@@ -8,6 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	// Version is the semantic version according to the release.
+	Version string
+)
+
 // Config is the ratproxy.yaml.
 type Config struct {
 	Listen  string    `yaml:"listen"`

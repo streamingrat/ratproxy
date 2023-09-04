@@ -58,6 +58,7 @@ func proxyTarget(ctx context.Context, target *Target) func(http.ResponseWriter, 
 
 func main() {
 
+	log.Printf("ratproxy: Version %v\n", Version)
 	c, err := NewConfig()
 	if err != nil {
 		log.Printf("ratproxy: Could not read config file %v\n", err)
